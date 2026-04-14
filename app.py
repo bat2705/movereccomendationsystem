@@ -1,9 +1,4 @@
-import streamlit as st
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.cluster import KMeans
-import pandas as pd
+
 
 # ─────────────────────────────────────────────
 # PAGE CONFIG
@@ -149,16 +144,17 @@ movie_titles = movies["title"].tolist()
 # ANTI-REC LOGIC (merged from anti_rec.py)
 # ─────────────────────────────────────────────
 
-def anti_recommendations(disliked_titles, matrix, titles, n=5):
-    indices = [titles.index(t) for t in disliked_titles if t in titles]
-    if not indices:
-        return []
-    dislike_vectors = matrix[indices].toarray()
-    avg_vector = np.mean(dislike_vectors, axis=0)
-    similarities = cosine_similarity(avg_vector.reshape(1, -1), matrix).flatten()
-    sorted_indices = similarities.argsort()  # ascending = most different first
-    results = [titles[i] for i in sorted_indices if titles[i] not in disliked_titles]
-    return results[:n]
+def anti_recommendations(disliked_titles, tfidf_matrix, movie_titles):
+    # 1. Convert disliked titles to their indices
+    bad_indices = [indices[t] for t in disliked_titles if t in indices]
+    if not bad_indices: return []
+    
+    # 2. Get average similarity to all "hated" movies
+    mean_sim = cosine_similarity(tfidf_matrix[bad_indices], tfidf_matrix).mean(axis=0)
+    
+    # 3. Sort from LEAST similar to MOST similar
+    least_sim_indices = np.argsort(mean_sim)[:10]
+    return movie_titles.iloc[least_sim_indices].tolist()
 
 # ─────────────────────────────────────────────
 # MOOD LOGIC
