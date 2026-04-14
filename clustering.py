@@ -2,19 +2,25 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
 
-# ── 1. Load Data ──────────────────────────────────────────
-# NOTE: Make sure the 'ml-100k' folder is in the same directory as this script
-ratings = pd.read_csv('u.data', sep='\t',
-                      names=['user_id','movie_id','rating','timestamp'])
 
-movies = pd.read_csv('u.item', sep='|', encoding='latin-1',
-                     names=['movie_id','title'] + [f'f{i}' for i in range(22)],
-                     usecols=['movie_id','title'])
+from pathlib import Path
+
+current_folder = Path(__file__).parent
+
+# 1. Define the paths
+ratings_path = current_folder / 'u.data'
+movies_path = current_folder / 'u.item'
+
+# 2. Actually LOAD the data
+# u.data is usually tab-separated: user_id | item_id | rating | timestamp
+ratings = pd.read_csv(ratings_path, sep='\t', header=None, names=['user_id', 'movie_id', 'rating', 'timestamp'])
+
+# u.item is usually pipe-separated (|) and requires a specific encoding
+movies = pd.read_csv(movies_path, sep='|', header=None, encoding='latin-1', usecols=[0, 1], names=['movie_id', 'title'])
 
 print("Data loaded successfully!")
 print(f"Total ratings: {len(ratings)}")
 print(f"Total movies: {len(movies)}")
-
 # ── 2. Build User-Item Matrix ─────────────────────────────
 matrix = ratings.pivot_table(index='user_id',
                              columns='movie_id',
