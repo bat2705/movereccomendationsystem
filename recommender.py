@@ -7,7 +7,7 @@ class ContentEngine:
         self.df = movies_df
         # Create tags if they don't exist in the raw file
         if 'tags' not in self.df.columns:
-            self.df['tags'] = self.df['title'].fillna('')
+            self.df['tags'] = self.df['genre'].fillna('')
         
         self.vectorizer = TfidfVectorizer(stop_words='english')
         self.tfidf_matrix = self.vectorizer.fit_transform(self.df['tags'])
