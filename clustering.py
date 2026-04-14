@@ -14,11 +14,13 @@ class TribeEngine:
     def get_tribe_recs(self, liked_titles, n=5):
         # Find movie IDs for the titles the user likes
         liked_ids = self.movies[self.movies['title'].isin(liked_titles)]['movie_id'].tolist()
-        if not liked_ids: return ["No matches found — try different titles"]
+        if not liked_ids:
+            return ["No matches found — try different titles"]
 
         # Create a "pseudo-user" profile based on liked movies
-        user_profile = pd.Series(0, index=self.matrix.columns[:-1]) # -1 to exclude 'tribe' col
-       valid_ids = [i for i in liked_ids if i in user_profile.index] user_profile.loc[valid_ids] = 5 Assume high rating for liked movies
+        user_profile = pd.Series(0, index=self.matrix.columns[:-1])  # -1 to exclude 'tribe' col
+        valid_ids = [i for i in liked_ids if i in user_profile.index]
+        user_profile.loc[valid_ids] = 5  # Assume high rating for liked movies
         
         # Predict which tribe this user belongs to
         tribe_id = self.kmeans.predict([user_profile])[0]
