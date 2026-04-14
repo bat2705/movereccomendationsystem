@@ -1,106 +1,29 @@
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from pathlib import Path
 
-current_folder = Path(__file__).parent
-file_path = current_folder / 'u.item'
+class ContentEngine:
+    def __init__(self, movies_df):
+        self.df = movies_df
+        # Create tags if they don't exist in the raw file
+        if 'tags' not in self.df.columns:
+            self.df['tags'] = self.df['title'].fillna('')
+        
+        self.vectorizer = TfidfVectorizer(stop_words='english')
+        self.tfidf_matrix = self.vectorizer.fit_transform(self.df['tags'])
+        self.indices = pd.Series(self.df.index, index=self.df['title']).drop_duplicates()
 
-df = pd.read_csv(file_path, sep='|', header=None, encoding='ISO-8859-1')
+    def get_mood_recs(self, mood_query, n=5):
+        query_vec = self.vectorizer.transform([mood_query])
+        sim_scores = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
+        top_indices = sim_scores.argsort()[::-1][:n]
+        return self.df['title'].iloc[top_indices].tolist()
 
-
-genre_list = [
-    'unknown', 'Action', 'Adventure', 'Animation', 'Childrens', 'Comedy', 
-    'Crime', 'Documentary', 'Drama', 'Fantasy', 'Film-Noir', 'Horror', 
-    'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western'
-]
-
-def combine_genres(row):
-    
-    return " ".join([genre_list[i] for i, val in enumerate(row[5:24]) if val == 1])
-
-
-df['genre_str'] = df.apply(combine_genres, axis=1)
-df['title'] = df[1].fillna('Unknown')
-df['tags'] = df['title'].astype(str) + " " + df['genre_str']
-
-df = df[[0, 1, 'tags']]
-df.columns = ['movie_id', 'title', 'tags']
-
-
-tfidf = TfidfVectorizer(stop_words='english')
-tfidf_matrix = tfidf.fit_transform(df['tags'])
-
-cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
-
-
-indices = pd.Series(df.index, index=df['title']).drop_duplicates()
-
-def get_recommendations(title, n=10):
-    if title not in indices:
-        return f"Movie '{title}' not found in the dataset."
-    
-  
-    idx = indices[title]
-
-    
-    sim_scores = list(enumerate(cosine_sim[idx]))
-
-    
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-
-    
-    sim_scores = sim_scores[1:n+1]
-
-    
-    movie_indices = [i[0] for i in sim_scores]
-    return df['title'].iloc[movie_indices]
-
-
-
-
-
-def mood_recommendations(mood, n=8):
-    
-    mood_map = {
-        'inspired': 'Adventure Animation Fantasy Sci-Fi',
-        'melancholy': 'Drama Film-Noir Documentary',
-        'hyped': 'Action Thriller War Western',
-        'cozy': 'Comedy Childrens Musical Romance',
-        'tense': 'Horror Mystery Thriller Crime'
-    }
-
-    
-    if mood.lower() not in mood_map:
-        return f"Mood '{mood}' not recognized. Try: {', '.join(mood_map.keys())}"
-
-    
-    mood_query = mood_map[mood.lower()]
-
-  
-    mood_vector = tfidf.transform([mood_query])
-
- 
-    mood_sim = cosine_similarity(mood_vector, tfidf_matrix)
-
-    
-    sim_scores = list(enumerate(mood_sim[0]))
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-
-    
-    top_indices = [i[0] for i in sim_scores[:n]]
-    return df['title'].iloc[top_indices]
-
-
-if __name__ == "__main__":
-    movie_to_search = 'Toy Story (1995)'
-    # print(f"--- Top 10 Recommendations for '{movie_to_search}' ---")
-    results = get_recommendations(movie_to_search, n=10)
-    
-    # if isinstance(results, str):
-    #     print(results)
-    # else:
-    #     for i, title in enumerate(results, 1):
-    #         print(f"{i}. {title}")
-
-    print(mood_recommendations('cozy', n=8))        
+    def get_anti_recs(self, disliked_titles, n=5):
+        bad_indices = [self.indices[t] for t in disliked_titles if t in self.indices]
+        if not bad_indices: return []
+        # Mean similarity to all disliked movies
+        mean_sim = cosine_similarity(self.tfidf_matrix[bad_indices], self.tfidf_matrix).mean(axis=0)
+        # Sort by LEAST similar
+        least_sim_indices = mean_sim.argsort()[:n]
+        return self.df['title'].iloc[least_sim_indices].tolist()
