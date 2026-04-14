@@ -94,13 +94,13 @@ def mood_recommendations(mood, n=8):
 
 if __name__ == "__main__":
     movie_to_search = 'Toy Story (1995)'
-    print(f"--- Top 10 Recommendations for '{movie_to_search}' ---")
+    # print(f"--- Top 10 Recommendations for '{movie_to_search}' ---")
     results = get_recommendations(movie_to_search, n=10)
     
-    if isinstance(results, str):
-        print(results)
-    else:
-        for i, title in enumerate(results, 1):
-            print(f"{i}. {title}")
+    # if isinstance(results, str):
+    #     print(results)
+    # else:
+    #     for i, title in enumerate(results, 1):
+    #         print(f"{i}. {title}")
 
     print(mood_recommendations('cozy', n=8))        
